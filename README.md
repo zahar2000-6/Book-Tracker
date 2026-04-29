@@ -20,4 +20,4 @@
 1. Установите Python (если не установлен).
 2.
    ```bash
-   git clone 
+   git clone https://github.com/zahar2000-6/Book-Tracker
