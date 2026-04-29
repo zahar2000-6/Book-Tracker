@@ -8,8 +8,8 @@ class BookTracker:
         self.root = root
         self.root.title("Book Tracker")
         self.books = []
-        self.load_data()
-        self.setup_ui()
+        self.setup_ui()  # Сначала создаём UI
+        self.load_data()  # Затем загружаем данные
 
     def setup_ui(self):
         # Поля ввода
@@ -63,25 +63,24 @@ class BookTracker:
 
         if not title or not author or not genre:
             messagebox.showerror("Ошибка", "Все текстовые поля должны быть заполнены!")
-            return False
+            return False, None, None, None, None
 
         try:
             pages_num = int(pages)
             if pages_num <= 0:
                 messagebox.showerror("Ошибка", "Количество страниц должно быть положительным числом!")
-                return False
+                return False, None, None, None, None
         except ValueError:
             messagebox.showerror("Ошибка", "Количество страниц должно быть числом!")
-            return False
+            return False, None, None, None, None
 
         return True, title, author, genre, pages_num
 
     def add_book(self):
-        validation_result = self.validate_input()
-        if validation_result is False:
+        is_valid, title, author, genre, pages = self.validate_input()
+        if not is_valid:
             return
 
-        is_valid, title, author, genre, pages = validation_result
         book = {"title": title, "author": author, "genre": genre, "pages": pages}
         self.books.append(book)
         self.update_table()
@@ -93,11 +92,13 @@ class BookTracker:
         self.genre_entry.delete(0, tk.END)
         self.pages_entry.delete(0, tk.END)
 
-    def update_table(self):
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        for book in self.books:
-            self.tree.insert("", "end", values=(book["title"], book["author"], book["genre"], book["pages"]))
+    def update_table(self, books=None):
+        if hasattr(self, 'tree') and self.tree is not None:
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+            display_books = books if books is not None else self.books
+            for book in display_books:
+                self.tree.insert("", "end", values=(book["title"], book["author"], book["genre"], book["pages"]))
 
     def apply_filters(self):
         filtered_books = self.books
@@ -110,28 +111,34 @@ class BookTracker:
         if pages_filter:
             try:
                 min_pages = int(pages_filter)
-                filtered_books = [b for b in filtered_books if b["pages"] >= min_pages]
+                filtered_books = [b for b in filtered_books if b["pages"] >= min_pages
             except ValueError:
                 messagebox.showwarning("Предупреждение", "Некорректное значение для фильтра страниц!")
 
-        self.update_filtered_table(filtered_books)
-
-    def update_filtered_table(self, books):
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        for book in books:
-            self.tree.insert("", "end", values=(book["title"], book["author"], book["genre"], book["pages"]))
+        self.update_table(filtered_books)
 
     def save_data(self):
-        with open("books.json", "w", encoding="utf-8") as f:
-            json.dump(self.books, f, ensure_ascii=False, indent=4)
-        messagebox.showinfo("Успех", "Данные сохранены в books.json")
+        try:
+            with open("books.json", "w", encoding="utf-8") as f:
+                json.dump(self.books, f, ensure_ascii=False, indent=4)
+            messagebox.showinfo("Успех", "Данные сохранены в books.json")
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось сохранить данные: {str(e)}")
 
     def load_data(self):
-        if os.path.exists("books.json"):
-            with open("books.json", "r", encoding="utf-8") as f:
-                self.books = json.load(f)
-            self.update_table()
+        try:
+            if os.path.exists("books.json"):
+                with open("books.json", "r", encoding="utf-8") as f:
+                    self.books = json.load(f)
+                self.update_table()
+                messagebox.showinfo("Успех", "Данные загружены из books.json")
+            else:
+                messagebox.showinfo("Информация", "Файл books.json не найден. Создан новый список.")
+        except json.JSONDecodeError:
+            messagebox.showerror("Ошибка", "Файл books.json повреждён. Создайте новый список книг.")
+            self.books = []
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось загрузить данные: {str(e)}")
 
 if __name__ == "__main__":
     root = tk.Tk()
